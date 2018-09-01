@@ -5,9 +5,11 @@ import sys
 import operator
 import pytest
 import ctypes
+from itertools import permutations
 
 import numpy as np
 from numpy.core._rational_tests import rational
+from numpy.core.numerictypes import typecodes
 from numpy.testing import assert_, assert_equal, assert_raises
 
 def assert_dtype_equal(a, b):
@@ -800,3 +802,16 @@ class TestFromCTypes(object):
             ('b', '>H')
         ], align=True)
         self.check(PaddedStruct, expected)
+
+    all_types = set(''.join(typecodes.values()))
+    all_pairs = permutations(all_types, 2)
+
+    @pytest.mark.parametrize("pair", all_pairs)
+    def test_pairs(self, pair):
+        """
+        Check that np.dtype('x,y') matches [np.dtype('x'), np.dtype('y')]
+        Example: np.dtype('d,I') -> dtype([('f0', '<f8'), ('f1', '<u4')])
+        """
+        pair_type = [t[1] for t in np.dtype('{},{}'.format(*pair)).descr]
+        expected = list(map(lambda t: np.dtype(t).descr[0][1], pair))
+        assert_equal(pair_type, expected)
